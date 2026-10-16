@@ -10,17 +10,27 @@ const Movie = () => {
   const [page, setPage] = useState(1);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [language, setLanguage] = useState("ta");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
-      const url =
-        language === "ta"
-          ? `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=ta&sort_by=popularity.desc&page=${page}`
-          : `${BASE_URL}/movie/popular?api_key=${API_KEY}&page=${page}`;
+      setLoading(true);
+      try {
+        const url =
+          language === "ta"
+            ? `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=ta&sort_by=popularity.desc&page=${page}`
+            : `${BASE_URL}/movie/popular?api_key=${API_KEY}&page=${page}`;
 
-      const res = await fetch(url);
-      const data = await res.json();
-      setMovies(data.results || []);
+        const res = await fetch(url);
+        const data = await res.json();
+        console.log("Status code: ", res.status);
+        setMovies(data.results || []);
+      } catch (error) {
+        console.error("Error fetching movies:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, [page, language]);
@@ -29,11 +39,24 @@ const Movie = () => {
     setLanguage(lang);
     setPage(1);
   };
+  const filter = movies.filter((movie) =>
+    (movie.title || "").toLowerCase().includes(search.toLowerCase().trim()),
+  );
 
   return (
     <div>
       <h2 className="heading">Movie Details</h2>
-
+      <label>Search : </label>
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => {
+          const val = e.target.value;
+          setSearch(val);
+          console.log(val);
+        }}
+        placeholder="Type to search..."
+      />
       <div className="filter-tabs">
         <button
           className={`filter-btn ${language === "ta" ? "active" : ""}`}
@@ -49,37 +72,66 @@ const Movie = () => {
         </button>
       </div>
 
-      <div className="movie-card">
-        {movies?.map((item) => (
-          <div key={item.id} className="movie">
-            <img
-              src={`${IMAGE_BASE_URL}${item.poster_path}`}
-              alt={item.title}
-              className="movie-poster"
-            />
-            <h2>{item.title}</h2>
-            <p>
-              <strong>Release:</strong> {item.release_date}
-            </p>
-            <p>
-              <strong>Rating:</strong> {item.vote_average}
-            </p>
-            <p className="overview">{item.overview}</p>
-            <button className="btn" onClick={() => setSelectedMovie(item)}>
-              View Details
-            </button>
+      {loading && (
+        <div className="loader-container">
+          <div className="loader"></div>
+
+          <p className="loading-text">Loading movies...</p>
+        </div>
+      )}
+
+      {!loading && filter.length === 0 && (
+        <div className="not-found-container">
+          <h3 className="not-found-title">No Movies Found</h3>
+          <p className="not-found-desc">
+            {search
+              ? `No movies match "${search}". Try another search term!`
+              : "We couldn't find any movies for this selection. Try switching filters or check back later!"}
+          </p>
+        </div>
+      )}
+
+      {!loading && filter.length > 0 && (
+        <>
+          <div className="movie-card">
+            {filter.map((item) => (
+              <div key={item.id} className="movie">
+                <img
+                  src={
+                    item.poster_path
+                      ? `${IMAGE_BASE_URL}${item.poster_path}`
+                      : "https://via.placeholder.com/500x750?text=No+Poster"
+                  }
+                  alt={item.title}
+                  className="movie-poster"
+                />
+                <h2>{item.title}</h2>
+                <p>
+                  <strong>Release:</strong> {item.release_date || "N/A"}
+                </p>
+                <p>
+                  <strong>Rating:</strong> {item.vote_average ?? "N/A"}
+                </p>
+                <p className="overview">
+                  {item.overview || "No overview available."}
+                </p>
+                <button className="btn" onClick={() => setSelectedMovie(item)}>
+                  View Details
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="Page">
-        <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-          Prev
-        </button>
+          <div className="Page">
+            <button disabled={page === 1} onClick={() => setPage(page - 1)}>
+              Prev
+            </button>
 
-        <span>Page {page}</span>
-        <button onClick={() => setPage(page + 1)}>Next</button>
-      </div>
+            <span>Page {page}</span>
+            <button onClick={() => setPage(page + 1)}>Next</button>
+          </div>
+        </>
+      )}
 
       {selectedMovie && (
         <div className="modal-backdrop" onClick={() => setSelectedMovie(null)}>

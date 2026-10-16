@@ -1,3 +1,4 @@
-/* * {
-  background: antiquewhite;
-} */
+body {
+  background: linear-gradient(135deg, #d46ecc91 0%, #6f6aa29a 50%, #d8d3f7 100%);
+}
+
